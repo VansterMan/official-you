@@ -68,7 +68,7 @@ export default function Login() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -146,7 +146,7 @@ export default function Login() {
                 fontFamily: 'inherit',
                 transition: 'border-color 0.2s'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onFocus={(e) => e.target.style.borderColor = '#0A9D93'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
@@ -175,7 +175,7 @@ export default function Login() {
                 fontFamily: 'inherit',
                 transition: 'border-color 0.2s'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onFocus={(e) => e.target.style.borderColor = '#0A9D93'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
@@ -186,7 +186,7 @@ export default function Login() {
             style={{
               width: '100%',
               padding: '14px',
-              background: loading ? '#cbd5e1' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: loading ? '#cbd5e1' : 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -270,7 +270,7 @@ export default function Login() {
           <Link 
             to="/signup"
             style={{
-              color: '#667eea',
+              color: '#0A9D93',
               fontWeight: '600',
               textDecoration: 'none'
             }}

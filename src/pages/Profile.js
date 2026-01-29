@@ -56,7 +56,7 @@ export default function Profile() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
         fontFamily: '"DM Sans", system-ui, sans-serif',
         padding: '20px'
       }}>
@@ -86,7 +86,7 @@ export default function Profile() {
               display: 'inline-block',
               padding: '14px 32px',
               background: 'white',
-              color: '#667eea',
+              color: '#0A9D93',
               borderRadius: '8px',
               textDecoration: 'none',
               fontWeight: '700',
@@ -129,7 +129,7 @@ export default function Profile() {
             width: '128px',
             height: '128px',
             borderRadius: '50%',
-            background: profile.photoURL ? `url(${profile.photoURL})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: profile.photoURL ? `url(${profile.photoURL})` : 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             margin: '0 auto 24px',
@@ -210,7 +210,7 @@ export default function Profile() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    color: '#667eea',
+                    color: '#0A9D93',
                     fontSize: '15px',
                     textDecoration: 'none'
                   }}
@@ -226,7 +226,7 @@ export default function Profile() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    color: '#667eea',
+                    color: '#0A9D93',
                     fontSize: '15px',
                     textDecoration: 'none'
                   }}

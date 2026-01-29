@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
 export default function Signup() {
@@ -10,9 +10,11 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [codeValid, setCodeValid] = useState(null);
   const navigate = useNavigate();
 
   // Check if username is available
@@ -35,12 +37,38 @@ export default function Signup() {
     }
   };
 
+  // Check if referral code is valid
+  const checkReferralCode = async (code) => {
+    if (!code || code.length < 3) {
+      setCodeValid(null);
+      return;
+    }
+
+    const cleanCode = code.toUpperCase().trim();
+    setReferralCode(cleanCode);
+
+    try {
+      const docRef = doc(db, 'referralCodes', cleanCode);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        setCodeValid(false);
+      } else {
+        const codeData = docSnap.data();
+        setCodeValid(!codeData.used);
+      }
+    } catch (err) {
+      console.error('Error checking referral code:', err);
+      setCodeValid(false);
+    }
+  };
+
   const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
 
     // Validation
-    if (!fullName || !username || !email || !password) {
+    if (!fullName || !username || !email || !password || !referralCode) {
       setError('Please fill in all fields');
       return;
     }
@@ -52,6 +80,11 @@ export default function Signup() {
 
     if (!usernameAvailable) {
       setError('Username is already taken');
+      return;
+    }
+
+    if (!codeValid) {
+      setError('Invalid or already used referral code');
       return;
     }
 
@@ -72,12 +105,20 @@ export default function Signup() {
         fullName,
         username,
         email,
+        referralCode,
         createdAt: new Date().toISOString()
       });
 
       // Reserve username
       await setDoc(doc(db, 'usernames', username), {
         uid: user.uid
+      });
+
+      // Mark referral code as used
+      await updateDoc(doc(db, 'referralCodes', referralCode), {
+        used: true,
+        usedBy: user.uid,
+        usedAt: new Date().toISOString()
       });
 
       // Redirect to dashboard
@@ -97,6 +138,12 @@ export default function Signup() {
   };
 
   const handleGoogleSignup = async () => {
+    // Require referral code for Google signup too
+    if (!referralCode || !codeValid) {
+      setError('Please enter a valid referral code first');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
@@ -133,12 +180,20 @@ export default function Signup() {
           username: finalUsername,
           email: user.email,
           photoURL: user.photoURL,
+          referralCode,
           createdAt: new Date().toISOString()
         });
 
         // Reserve username
         await setDoc(doc(db, 'usernames', finalUsername), {
           uid: user.uid
+        });
+
+        // Mark referral code as used
+        await updateDoc(doc(db, 'referralCodes', referralCode), {
+          used: true,
+          usedBy: user.uid,
+          usedAt: new Date().toISOString()
         });
 
         navigate('/dashboard');
@@ -158,7 +213,7 @@ export default function Signup() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #0A4D4A 0%, #005A8D 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -220,6 +275,68 @@ export default function Signup() {
               fontWeight: '600',
               color: '#1e293b'
             }}>
+              Referral Code *
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                value={referralCode}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase().trim();
+                  setReferralCode(val);
+                  checkReferralCode(val);
+                }}
+                placeholder="FOUNDER2025"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: `2px solid ${codeValid === true ? '#0A9D93' : codeValid === false ? '#ef4444' : '#e2e8f0'}`,
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontFamily: 'inherit',
+                  transition: 'border-color 0.2s',
+                  textTransform: 'uppercase'
+                }}
+                onFocus={(e) => e.target.style.borderColor = codeValid === true ? '#0A9D93' : codeValid === false ? '#ef4444' : '#0A9D93'}
+                onBlur={(e) => e.target.style.borderColor = codeValid === true ? '#0A9D93' : codeValid === false ? '#ef4444' : '#e2e8f0'}
+              />
+              {referralCode.length >= 3 && (
+                <div style={{
+                  fontSize: '12px',
+                  marginTop: '4px',
+                  color: codeValid ? '#0A9D93' : '#ef4444'
+                }}>
+                  {codeValid ? '✓ Valid code' : '✗ Invalid or used code'}
+                </div>
+              )}
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: '#64748b',
+              marginTop: '4px'
+            }}>
+              Don't have a code?{' '}
+              <Link 
+                to="/waitlist"
+                style={{
+                  color: '#0A9D93',
+                  fontWeight: '600',
+                  textDecoration: 'none'
+                }}
+              >
+                Join the waitlist
+              </Link>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#1e293b'
+            }}>
               Full Name *
             </label>
             <input
@@ -236,7 +353,7 @@ export default function Signup() {
                 fontFamily: 'inherit',
                 transition: 'border-color 0.2s'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onFocus={(e) => e.target.style.borderColor = '#0A9D93'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
@@ -264,20 +381,20 @@ export default function Signup() {
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: `2px solid ${usernameAvailable === true ? '#10b981' : usernameAvailable === false ? '#ef4444' : '#e2e8f0'}`,
+                  border: `2px solid ${usernameAvailable === true ? '#0A9D93' : usernameAvailable === false ? '#ef4444' : '#e2e8f0'}`,
                   borderRadius: '8px',
                   fontSize: '16px',
                   fontFamily: 'inherit',
                   transition: 'border-color 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = usernameAvailable === true ? '#10b981' : usernameAvailable === false ? '#ef4444' : '#667eea'}
-                onBlur={(e) => e.target.style.borderColor = usernameAvailable === true ? '#10b981' : usernameAvailable === false ? '#ef4444' : '#e2e8f0'}
+                onFocus={(e) => e.target.style.borderColor = usernameAvailable === true ? '#0A9D93' : usernameAvailable === false ? '#ef4444' : '#0A9D93'}
+                onBlur={(e) => e.target.style.borderColor = usernameAvailable === true ? '#0A9D93' : usernameAvailable === false ? '#ef4444' : '#e2e8f0'}
               />
               {username.length >= 3 && (
                 <div style={{
                   fontSize: '12px',
                   marginTop: '4px',
-                  color: usernameAvailable ? '#10b981' : '#ef4444'
+                  color: usernameAvailable ? '#0A9D93' : '#ef4444'
                 }}>
                   {usernameAvailable ? '✓ Username available' : '✗ Username taken'}
                 </div>
@@ -316,7 +433,7 @@ export default function Signup() {
                 fontFamily: 'inherit',
                 transition: 'border-color 0.2s'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onFocus={(e) => e.target.style.borderColor = '#0A9D93'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
@@ -345,28 +462,28 @@ export default function Signup() {
                 fontFamily: 'inherit',
                 transition: 'border-color 0.2s'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onFocus={(e) => e.target.style.borderColor = '#0A9D93'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
           </div>
 
           <button
             type="submit"
-            disabled={loading || !usernameAvailable}
+            disabled={loading || !usernameAvailable || !codeValid}
             style={{
               width: '100%',
               padding: '14px',
-              background: loading || !usernameAvailable ? '#cbd5e1' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: (loading || !usernameAvailable || !codeValid) ? '#cbd5e1' : 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
               fontSize: '16px',
               fontWeight: '700',
-              cursor: loading || !usernameAvailable ? 'not-allowed' : 'pointer',
+              cursor: (loading || !usernameAvailable || !codeValid) ? 'not-allowed' : 'pointer',
               transition: 'transform 0.2s'
             }}
             onMouseEnter={(e) => {
-              if (!loading && usernameAvailable) e.target.style.transform = 'translateY(-2px)';
+              if (!loading && usernameAvailable && codeValid) e.target.style.transform = 'translateY(-2px)';
             }}
             onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
           >
@@ -440,7 +557,7 @@ export default function Signup() {
           <Link 
             to="/login"
             style={{
-              color: '#667eea',
+              color: '#0A9D93',
               fontWeight: '600',
               textDecoration: 'none'
             }}

@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { auth, db, storage } from '../firebase';
 import { ExternalLink, LogOut, User, Upload, MapPin, Mail, Phone } from 'lucide-react';
+import Logo from '../components/Logo';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -167,14 +168,21 @@ export default function Dashboard() {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <h1 style={{
-            fontSize: '24px',
-            fontWeight: '900',
-            fontFamily: '"Archivo Black", sans-serif',
-            color: '#1e293b'
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
           }}>
-            Official You
-          </h1>
+            <Logo size={32} />
+            <h1 style={{
+              fontSize: '24px',
+              fontWeight: '900',
+              fontFamily: '"Archivo Black", sans-serif',
+              color: '#1e293b'
+            }}>
+              Official You
+            </h1>
+          </div>
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <Link
@@ -240,7 +248,7 @@ export default function Dashboard() {
             gap: '12px',
             marginBottom: '24px'
           }}>
-            <User size={24} color="#667eea" />
+            <User size={24} color="#0A9D93" />
             <h2 style={{
               fontSize: '20px',
               fontWeight: '700',
@@ -263,7 +271,7 @@ export default function Dashboard() {
             <div style={{
               fontSize: '18px',
               fontWeight: '600',
-              color: '#667eea'
+              color: '#0A9D93'
             }}>
               offu.io/{profile?.username}
             </div>
@@ -290,7 +298,7 @@ export default function Dashboard() {
                 width: '120px',
                 height: '120px',
                 borderRadius: '50%',
-                background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: photoURL ? `url(${photoURL})` : 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 margin: '0 auto 16px',
@@ -329,11 +337,11 @@ export default function Dashboard() {
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                   pointerEvents: 'none'
                 }}>
-                  <Upload size={16} color="#667eea" />
+                  <Upload size={16} color="#0A9D93" />
                 </div>
               </div>
               {uploading && (
-                <div style={{ fontSize: '14px', color: '#667eea', fontWeight: '500' }}>
+                <div style={{ fontSize: '14px', color: '#0A9D93', fontWeight: '500' }}>
                   Uploading...
                 </div>
               )}
@@ -492,7 +500,7 @@ export default function Dashboard() {
               disabled={saving}
               style={{
                 padding: '12px 24px',
-                background: saving ? '#cbd5e1' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: saving ? '#cbd5e1' : 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
