@@ -50,7 +50,7 @@ export default function Home() {
           marginBottom: '48px',
           fontWeight: '500'
         }}>
-          One link for everything you are
+          In a world of copies, there's one real you
         </p>
 
         {/* CTA Buttons */}
