@@ -1,7 +1,7 @@
 // src/pages/Login.js
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -10,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -59,6 +60,33 @@ export default function Login() {
         setError('Sign-in cancelled');
       } else {
         setError('Failed to sign in with Google. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setResetSent(true);
+      setTimeout(() => setResetSent(false), 5000);
+    } catch (err) {
+      console.error('Password reset error:', err);
+      if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('Invalid email address');
+      } else {
+        setError('Failed to send reset email. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -121,6 +149,20 @@ export default function Login() {
           </div>
         )}
 
+        {resetSent && (
+          <div style={{
+            background: '#d1fae5',
+            border: '1px solid #a7f3d0',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginBottom: '24px',
+            color: '#065f46',
+            fontSize: '14px'
+          }}>
+            Password reset email sent! Check your inbox.
+          </div>
+        )}
+
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '20px' }}>
             <label style={{
@@ -178,6 +220,27 @@ export default function Login() {
               onFocus={(e) => e.target.style.borderColor = '#0A9D93'}
               onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
             />
+            <div style={{
+              textAlign: 'right',
+              marginTop: '8px'
+            }}>
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0A9D93',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  padding: 0
+                }}
+              >
+                Forgot password?
+              </button>
+            </div>
           </div>
 
           <button

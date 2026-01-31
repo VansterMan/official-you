@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Logo from '../components/Logo';
+import Footer from '../components/Footer';
 
 export default function Home() {
   return (
@@ -158,6 +159,31 @@ export default function Home() {
             Log in
           </Link>
         </p>
+
+        {/* Footer */}
+        <div style={{ marginTop: '60px' }}>
+          <div style={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '14px',
+            textAlign: 'center'
+          }}>
+            Official You is a product of{' '}
+            <a
+              href="https://fancy.works/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'white',
+                fontWeight: '600',
+                textDecoration: 'none'
+              }}
+              onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+              onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+            >
+              Fancy Works
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

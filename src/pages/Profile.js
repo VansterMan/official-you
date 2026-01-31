@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MapPin, Mail, Phone, Linkedin, Facebook, Instagram, Youtube, Twitter, Music, Share2, Globe, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import Footer from '../components/Footer';
 
 export default function Profile() {
   const { username } = useParams();
@@ -388,24 +389,7 @@ export default function Profile() {
         )}
 
         {/* Footer */}
-        <div style={{
-          textAlign: 'center',
-          marginTop: '40px',
-          paddingTop: '24px',
-          borderTop: '1px solid #e2e8f0'
-        }}>
-          <Link
-            to="/"
-            style={{
-              color: '#64748b',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
-          >
-            Create your own Official You profile
-          </Link>
-        </div>
+        <Footer />
       </div>
     </div>
   );
