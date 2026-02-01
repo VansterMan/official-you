@@ -13,6 +13,57 @@ import {
 } from 'lucide-react';
 import Logo from '../components/Logo';
 
+// Defined outside the component so they're stable references (won't change between renders)
+const socialPlatforms = [
+  { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/yourprofile', Icon: Linkedin, color: '#0A66C2' },
+  { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/yourprofile', Icon: Facebook, color: '#1877F2' },
+  { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/yourprofile', Icon: Instagram, color: '#E4405F' },
+  { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@yourprofile', Icon: Music, color: '#000000' },
+  { key: 'lemon8', label: 'Lemon8', placeholder: 'https://lemon8-app.com/yourprofile', Icon: Share2, color: '#FFD600' },
+  { key: 'pinterest', label: 'Pinterest', placeholder: 'https://pinterest.com/yourprofile', Icon: Share2, color: '#E60023' },
+  { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@yourprofile', Icon: Youtube, color: '#FF0000' },
+  { key: 'bluesky', label: 'BlueSky', placeholder: 'https://bsky.app/profile/yourprofile', Icon: Globe, color: '#1185FE' },
+  { key: 'twitter', label: 'X (Twitter)', placeholder: 'https://twitter.com/yourprofile', Icon: Twitter, color: '#000000' },
+  { key: 'mastodon', label: 'Mastodon', placeholder: 'https://mastodon.social/@yourprofile', Icon: Share2, color: '#6364FF' }
+];
+
+// Migration helper: convert old format (socialLinks object + customLinks array) into unified links array
+const migrateToUnifiedLinks = (data) => {
+  if (data.links && Array.isArray(data.links)) {
+    return data.links;
+  }
+
+  const unified = [];
+
+  if (data.socialLinks) {
+    Object.entries(data.socialLinks).forEach(([platform, url]) => {
+      if (url && url.trim() !== '') {
+        unified.push({
+          id: `social-${platform}`,
+          type: 'social',
+          platform,
+          title: socialPlatforms.find(p => p.key === platform)?.label || platform,
+          url: url.trim()
+        });
+      }
+    });
+  }
+
+  if (data.customLinks && Array.isArray(data.customLinks)) {
+    data.customLinks.forEach(link => {
+      unified.push({
+        id: link.id || Date.now() + Math.random(),
+        type: 'custom',
+        platform: null,
+        title: link.title,
+        url: link.url
+      });
+    });
+  }
+
+  return unified;
+};
+
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -32,61 +83,7 @@ export default function Dashboard() {
   const [newLinkTitle, setNewLinkTitle] = useState('');
   const [newLinkUrl, setNewLinkUrl] = useState('');
   
-  // Social platforms config
-  const socialPlatforms = [
-    { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/yourprofile', Icon: Linkedin, color: '#0A66C2' },
-    { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/yourprofile', Icon: Facebook, color: '#1877F2' },
-    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/yourprofile', Icon: Instagram, color: '#E4405F' },
-    { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@yourprofile', Icon: Music, color: '#000000' },
-    { key: 'lemon8', label: 'Lemon8', placeholder: 'https://lemon8-app.com/yourprofile', Icon: Share2, color: '#FFD600' },
-    { key: 'pinterest', label: 'Pinterest', placeholder: 'https://pinterest.com/yourprofile', Icon: Share2, color: '#E60023' },
-    { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@yourprofile', Icon: Youtube, color: '#FF0000' },
-    { key: 'bluesky', label: 'BlueSky', placeholder: 'https://bsky.app/profile/yourprofile', Icon: Globe, color: '#1185FE' },
-    { key: 'twitter', label: 'X (Twitter)', placeholder: 'https://twitter.com/yourprofile', Icon: Twitter, color: '#000000' },
-    { key: 'mastodon', label: 'Mastodon', placeholder: 'https://mastodon.social/@yourprofile', Icon: Share2, color: '#6364FF' }
-  ];
-
   const navigate = useNavigate();
-
-  // Migration helper: convert old format (socialLinks object + customLinks array) into unified links array
-  const migrateToUnifiedLinks = (data) => {
-    // If already using new format, return as-is
-    if (data.links && Array.isArray(data.links)) {
-      return data.links;
-    }
-
-    const unified = [];
-
-    // Convert old socialLinks object
-    if (data.socialLinks) {
-      Object.entries(data.socialLinks).forEach(([platform, url]) => {
-        if (url && url.trim() !== '') {
-          unified.push({
-            id: `social-${platform}`,
-            type: 'social',
-            platform,
-            title: socialPlatforms.find(p => p.key === platform)?.label || platform,
-            url: url.trim()
-          });
-        }
-      });
-    }
-
-    // Convert old customLinks array
-    if (data.customLinks && Array.isArray(data.customLinks)) {
-      data.customLinks.forEach(link => {
-        unified.push({
-          id: link.id || Date.now() + Math.random(),
-          type: 'custom',
-          platform: null,
-          title: link.title,
-          url: link.url
-        });
-      });
-    }
-
-    return unified;
-  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
