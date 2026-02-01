@@ -1,10 +1,24 @@
 // src/pages/Profile.js - Phase 3: Display Links
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MapPin, Mail, Phone, Linkedin, Facebook, Instagram, Youtube, Twitter, Music, Share2, Globe, Link as LinkIcon, ExternalLink } from 'lucide-react';
 import Footer from '../components/Footer';
+
+// Defined outside the component so they don't change between renders
+const socialLabels = {
+  linkedin: 'LinkedIn',
+  facebook: 'Facebook',
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  twitter: 'X (Twitter)',
+  tiktok: 'TikTok',
+  lemon8: 'Lemon8',
+  pinterest: 'Pinterest',
+  bluesky: 'BlueSky',
+  mastodon: 'Mastodon'
+};
 
 export default function Profile() {
   const { username } = useParams();
@@ -35,6 +49,34 @@ export default function Profile() {
     loadProfile();
   }, [username]);
 
+  // useMemo must be before any early returns — React hooks must always run in the same order
+  const { allLinks, hasLinks } = useMemo(() => {
+    if (!profile) return { allLinks: [], hasLinks: false };
+
+    let links = [];
+
+    if (profile.links && Array.isArray(profile.links) && profile.links.length > 0) {
+      links = profile.links;
+    } else {
+      // Fall back to old format for migration
+      if (profile.socialLinks) {
+        Object.entries(profile.socialLinks).forEach(([platform, url]) => {
+          if (url && url.trim() !== '') {
+            links.push({ id: `social-${platform}`, type: 'social', platform, title: socialLabels[platform] || platform, url });
+          }
+        });
+      }
+      if (profile.customLinks && Array.isArray(profile.customLinks)) {
+        profile.customLinks.forEach(link => {
+          links.push({ ...link, type: 'custom' });
+        });
+      }
+    }
+
+    return { allLinks: links, hasLinks: links.length > 0 };
+  }, [profile]);
+
+  // Helper to get the icon for a social platform — called during render, not a hook
   const getSocialIcon = (platform) => {
     const icons = {
       linkedin: <Linkedin size={20} />,
@@ -51,22 +93,7 @@ export default function Profile() {
     return icons[platform] || <LinkIcon size={20} />;
   };
 
-  const getSocialLabel = (platform) => {
-    const labels = {
-      linkedin: 'LinkedIn',
-      facebook: 'Facebook',
-      instagram: 'Instagram',
-      youtube: 'YouTube',
-      twitter: 'X (Twitter)',
-      tiktok: 'TikTok',
-      lemon8: 'Lemon8',
-      pinterest: 'Pinterest',
-      bluesky: 'BlueSky',
-      mastodon: 'Mastodon'
-    };
-    return labels[platform] || platform;
-  };
-
+  // Early returns are safe here — all hooks have already run above
   if (loading) {
     return (
       <div style={{
@@ -131,13 +158,6 @@ export default function Profile() {
       </div>
     );
   }
-
-  // Get active social links (non-empty)
-  const activeSocialLinks = profile.socialLinks 
-    ? Object.entries(profile.socialLinks).filter(([platform, url]) => url && url.trim() !== '')
-    : [];
-
-  const hasLinks = activeSocialLinks.length > 0 || (profile.customLinks && profile.customLinks.length > 0);
 
   return (
     <div style={{
@@ -285,44 +305,7 @@ export default function Profile() {
             flexDirection: 'column',
             gap: '12px'
           }}>
-            {/* Social Media Links */}
-            {activeSocialLinks.map(([platform, url]) => (
-              <a
-                key={platform}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '16px 24px',
-                  background: 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
-                  color: 'white',
-                  borderRadius: '12px',
-                  textDecoration: 'none',
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  boxShadow: '0 2px 8px rgba(10, 157, 147, 0.2)',
-                  transition: 'transform 0.2s, box-shadow 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(10, 157, 147, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(10, 157, 147, 0.2)';
-                }}
-              >
-                {getSocialIcon(platform)}
-                <span style={{ flex: 1 }}>{getSocialLabel(platform)}</span>
-                <ExternalLink size={18} />
-              </a>
-            ))}
-
-            {/* Custom Links */}
-            {profile.customLinks && profile.customLinks.map((link) => (
+            {allLinks.map((link) => (
               <a
                 key={link.id}
                 href={link.url}
@@ -351,7 +334,10 @@ export default function Profile() {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(10, 157, 147, 0.2)';
                 }}
               >
-                <LinkIcon size={20} />
+                {link.type === 'social' 
+                  ? getSocialIcon(link.platform) 
+                  : <LinkIcon size={20} />
+                }
                 <span style={{ flex: 1 }}>{link.title}</span>
                 <ExternalLink size={18} />
               </a>

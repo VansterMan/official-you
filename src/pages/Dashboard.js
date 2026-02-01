@@ -27,26 +27,66 @@ export default function Dashboard() {
   const [photoURL, setPhotoURL] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
   
-  // Social media links
-  const [socialLinks, setSocialLinks] = useState({
-    linkedin: '',
-    facebook: '',
-    instagram: '',
-    tiktok: '',
-    lemon8: '',
-    pinterest: '',
-    youtube: '',
-    bluesky: '',
-    twitter: '',
-    mastodon: ''
-  });
-  
-  // Custom links
-  const [customLinks, setCustomLinks] = useState([]);
+  // Unified links array - each item: { id, type: 'social'|'custom', platform, title, url }
+  const [links, setLinks] = useState([]);
   const [newLinkTitle, setNewLinkTitle] = useState('');
   const [newLinkUrl, setNewLinkUrl] = useState('');
   
+  // Social platforms config
+  const socialPlatforms = [
+    { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/yourprofile', Icon: Linkedin, color: '#0A66C2' },
+    { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/yourprofile', Icon: Facebook, color: '#1877F2' },
+    { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/yourprofile', Icon: Instagram, color: '#E4405F' },
+    { key: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@yourprofile', Icon: Music, color: '#000000' },
+    { key: 'lemon8', label: 'Lemon8', placeholder: 'https://lemon8-app.com/yourprofile', Icon: Share2, color: '#FFD600' },
+    { key: 'pinterest', label: 'Pinterest', placeholder: 'https://pinterest.com/yourprofile', Icon: Share2, color: '#E60023' },
+    { key: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@yourprofile', Icon: Youtube, color: '#FF0000' },
+    { key: 'bluesky', label: 'BlueSky', placeholder: 'https://bsky.app/profile/yourprofile', Icon: Globe, color: '#1185FE' },
+    { key: 'twitter', label: 'X (Twitter)', placeholder: 'https://twitter.com/yourprofile', Icon: Twitter, color: '#000000' },
+    { key: 'mastodon', label: 'Mastodon', placeholder: 'https://mastodon.social/@yourprofile', Icon: Share2, color: '#6364FF' }
+  ];
+
   const navigate = useNavigate();
+
+  // Migration helper: convert old format (socialLinks object + customLinks array) into unified links array
+  const migrateToUnifiedLinks = (data) => {
+    // If already using new format, return as-is
+    if (data.links && Array.isArray(data.links)) {
+      return data.links;
+    }
+
+    const unified = [];
+
+    // Convert old socialLinks object
+    if (data.socialLinks) {
+      Object.entries(data.socialLinks).forEach(([platform, url]) => {
+        if (url && url.trim() !== '') {
+          unified.push({
+            id: `social-${platform}`,
+            type: 'social',
+            platform,
+            title: socialPlatforms.find(p => p.key === platform)?.label || platform,
+            url: url.trim()
+          });
+        }
+      });
+    }
+
+    // Convert old customLinks array
+    if (data.customLinks && Array.isArray(data.customLinks)) {
+      data.customLinks.forEach(link => {
+        unified.push({
+          id: link.id || Date.now() + Math.random(),
+          type: 'custom',
+          platform: null,
+          title: link.title,
+          url: link.url
+        });
+      });
+    }
+
+    return unified;
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -63,19 +103,7 @@ export default function Dashboard() {
           setEmail(data.email || currentUser.email || '');
           setPhone(data.phone || '');
           setPhotoURL(data.photoURL || '');
-          setSocialLinks(data.socialLinks || {
-            linkedin: '',
-            facebook: '',
-            instagram: '',
-            tiktok: '',
-            lemon8: '',
-            pinterest: '',
-            youtube: '',
-            bluesky: '',
-            twitter: '',
-            mastodon: ''
-          });
-          setCustomLinks(data.customLinks || []);
+          setLinks(migrateToUnifiedLinks(data));
         }
         setLoading(false);
       } else {
@@ -99,8 +127,7 @@ export default function Dashboard() {
         location,
         email,
         phone,
-        socialLinks,
-        customLinks,
+        links,
         updatedAt: new Date().toISOString()
       });
       
@@ -171,27 +198,55 @@ export default function Dashboard() {
 
     const newLink = {
       id: Date.now(),
+      type: 'custom',
+      platform: null,
       title: newLinkTitle,
       url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`
     };
 
-    setCustomLinks([...customLinks, newLink]);
+    setLinks([...links, newLink]);
     setNewLinkTitle('');
     setNewLinkUrl('');
   };
 
-  const deleteCustomLink = (id) => {
-    setCustomLinks(customLinks.filter(link => link.id !== id));
+  const addOrUpdateSocialLink = (platform, url) => {
+    const existingIndex = links.findIndex(l => l.type === 'social' && l.platform === platform);
+    
+    if (url.trim() === '') {
+      // Remove if cleared
+      if (existingIndex !== -1) {
+        setLinks(links.filter((_, i) => i !== existingIndex));
+      }
+    } else if (existingIndex !== -1) {
+      // Update existing
+      const updated = [...links];
+      updated[existingIndex] = { ...updated[existingIndex], url: url.trim() };
+      setLinks(updated);
+    } else {
+      // Add new social link
+      const platform_config = socialPlatforms.find(p => p.key === platform);
+      setLinks([...links, {
+        id: `social-${platform}`,
+        type: 'social',
+        platform,
+        title: platform_config?.label || platform,
+        url: url.trim()
+      }]);
+    }
   };
 
-  const moveCustomLink = (index, direction) => {
-    const newLinks = [...customLinks];
+  const deleteLink = (id) => {
+    setLinks(links.filter(link => link.id !== id));
+  };
+
+  const moveLink = (index, direction) => {
+    const newLinks = [...links];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     
     if (newIndex < 0 || newIndex >= newLinks.length) return;
     
     [newLinks[index], newLinks[newIndex]] = [newLinks[newIndex], newLinks[index]];
-    setCustomLinks(newLinks);
+    setLinks(newLinks);
   };
 
   if (loading) {
@@ -579,7 +634,7 @@ export default function Dashboard() {
           </form>
         </div>
 
-        {/* Social Media Links Card */}
+        {/* Social Media Links Card - input forms only */}
         <div style={{
           background: 'white',
           borderRadius: '12px',
@@ -600,303 +655,43 @@ export default function Dashboard() {
             color: '#64748b',
             marginBottom: '24px'
           }}>
-            Add your social media profiles. Leave blank if you don't use a platform.
+            Add your social media profiles. They'll appear in your links below where you can reorder them.
           </p>
 
           <div style={{ display: 'grid', gap: '16px' }}>
-            {/* LinkedIn */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Linkedin size={18} color="#0A66C2" />
-                LinkedIn
-              </label>
-              <input
-                type="url"
-                value={socialLinks.linkedin}
-                onChange={(e) => setSocialLinks({...socialLinks, linkedin: e.target.value})}
-                placeholder="https://linkedin.com/in/yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* Facebook */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Facebook size={18} color="#1877F2" />
-                Facebook
-              </label>
-              <input
-                type="url"
-                value={socialLinks.facebook}
-                onChange={(e) => setSocialLinks({...socialLinks, facebook: e.target.value})}
-                placeholder="https://facebook.com/yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* Instagram */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Instagram size={18} color="#E4405F" />
-                Instagram
-              </label>
-              <input
-                type="url"
-                value={socialLinks.instagram}
-                onChange={(e) => setSocialLinks({...socialLinks, instagram: e.target.value})}
-                placeholder="https://instagram.com/yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* TikTok */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Music size={18} color="#000000" />
-                TikTok
-              </label>
-              <input
-                type="url"
-                value={socialLinks.tiktok}
-                onChange={(e) => setSocialLinks({...socialLinks, tiktok: e.target.value})}
-                placeholder="https://tiktok.com/@yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* Lemon8 */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Share2 size={18} color="#FFD600" />
-                Lemon8
-              </label>
-              <input
-                type="url"
-                value={socialLinks.lemon8}
-                onChange={(e) => setSocialLinks({...socialLinks, lemon8: e.target.value})}
-                placeholder="https://lemon8-app.com/yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* Pinterest */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Share2 size={18} color="#E60023" />
-                Pinterest
-              </label>
-              <input
-                type="url"
-                value={socialLinks.pinterest}
-                onChange={(e) => setSocialLinks({...socialLinks, pinterest: e.target.value})}
-                placeholder="https://pinterest.com/yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* YouTube */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Youtube size={18} color="#FF0000" />
-                YouTube
-              </label>
-              <input
-                type="url"
-                value={socialLinks.youtube}
-                onChange={(e) => setSocialLinks({...socialLinks, youtube: e.target.value})}
-                placeholder="https://youtube.com/@yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* BlueSky */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Globe size={18} color="#1185FE" />
-                BlueSky
-              </label>
-              <input
-                type="url"
-                value={socialLinks.bluesky}
-                onChange={(e) => setSocialLinks({...socialLinks, bluesky: e.target.value})}
-                placeholder="https://bsky.app/profile/yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* X (Twitter) */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Twitter size={18} color="#000000" />
-                X (Twitter)
-              </label>
-              <input
-                type="url"
-                value={socialLinks.twitter}
-                onChange={(e) => setSocialLinks({...socialLinks, twitter: e.target.value})}
-                placeholder="https://twitter.com/yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
-
-            {/* Mastodon */}
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: '600',
-                color: '#1e293b'
-              }}>
-                <Share2 size={18} color="#6364FF" />
-                Mastodon
-              </label>
-              <input
-                type="url"
-                value={socialLinks.mastodon}
-                onChange={(e) => setSocialLinks({...socialLinks, mastodon: e.target.value})}
-                placeholder="https://mastodon.social/@yourprofile"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '8px',
-                  fontSize: '15px'
-                }}
-              />
-            </div>
+            {socialPlatforms.map(({ key, label, placeholder, Icon, color }) => (
+              <div key={key}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1e293b'
+                }}>
+                  <Icon size={18} color={color} />
+                  {label}
+                </label>
+                <input
+                  type="url"
+                  value={links.find(l => l.type === 'social' && l.platform === key)?.url || ''}
+                  onChange={(e) => addOrUpdateSocialLink(key, e.target.value)}
+                  placeholder={placeholder}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '15px'
+                  }}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Custom Links Card */}
+        {/* Add Custom Link Form */}
         <div style={{
           background: 'white',
           borderRadius: '12px',
@@ -920,12 +715,10 @@ export default function Dashboard() {
             Add custom links to your website, blog, store, or anything else!
           </p>
 
-          {/* Add New Link Form */}
           <div style={{
             background: '#f8fafc',
             borderRadius: '8px',
-            padding: '20px',
-            marginBottom: '24px'
+            padding: '20px'
           }}>
             <div style={{ marginBottom: '12px' }}>
               <label style={{
@@ -997,119 +790,172 @@ export default function Dashboard() {
               Add Link
             </button>
           </div>
+        </div>
 
-          {/* Existing Links List */}
-          {customLinks.length > 0 ? (
+        {/* Unified Links List - reorder everything here */}
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '32px',
+          marginBottom: '24px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+        }}>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: '700',
+            color: '#1e293b',
+            marginBottom: '8px'
+          }}>
+            Link Order
+          </h2>
+          <p style={{
+            fontSize: '14px',
+            color: '#64748b',
+            marginBottom: '24px'
+          }}>
+            Drag to reorder. This is the order your links will appear on your profile.
+          </p>
+
+          {links.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {customLinks.map((link, index) => (
-                <div
-                  key={link.id}
-                  style={{
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    padding: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                  }}
-                >
-                  {/* Link Icon */}
-                  <LinkIcon size={20} color="#0A9D93" />
+              {links.map((link, index) => {
+                const socialConfig = link.type === 'social' 
+                  ? socialPlatforms.find(p => p.key === link.platform) 
+                  : null;
+                const Icon = socialConfig ? socialConfig.Icon : LinkIcon;
+                const iconColor = socialConfig ? socialConfig.color : '#0A9D93';
 
-                  {/* Link Info */}
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      color: '#1e293b',
-                      marginBottom: '4px'
-                    }}>
-                      {link.title}
+                return (
+                  <div
+                    key={link.id}
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}
+                  >
+                    {/* Icon */}
+                    <Icon size={20} color={iconColor} style={{ flexShrink: 0 }} />
+
+                    {/* Link Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        color: '#1e293b',
+                        marginBottom: '4px'
+                      }}>
+                        {link.title}
+                        {link.type === 'social' && (
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: '500',
+                            color: '#0A9D93',
+                            background: '#e0f9f6',
+                            padding: '2px 8px',
+                            borderRadius: '10px',
+                            marginLeft: '8px'
+                          }}>
+                            Social
+                          </span>
+                        )}
+                      </div>
+                      <div style={{
+                        fontSize: '13px',
+                        color: '#64748b',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {link.url}
+                      </div>
                     </div>
-                    <div style={{
-                      fontSize: '13px',
-                      color: '#64748b',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {link.url}
+
+                    {/* Controls */}
+                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                      <button
+                        onClick={() => moveLink(index, 'up')}
+                        disabled={index === 0}
+                        style={{
+                          padding: '6px',
+                          background: 'white',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          cursor: index === 0 ? 'not-allowed' : 'pointer',
+                          opacity: index === 0 ? 0.4 : 1
+                        }}
+                      >
+                        <ChevronUp size={18} color="#64748b" />
+                      </button>
+
+                      <button
+                        onClick={() => moveLink(index, 'down')}
+                        disabled={index === links.length - 1}
+                        style={{
+                          padding: '6px',
+                          background: 'white',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          cursor: index === links.length - 1 ? 'not-allowed' : 'pointer',
+                          opacity: index === links.length - 1 ? 0.4 : 1
+                        }}
+                      >
+                        <ChevronDown size={18} color="#64748b" />
+                      </button>
+
+                      <button
+                        onClick={() => deleteLink(link.id)}
+                        style={{
+                          padding: '6px',
+                          background: 'white',
+                          border: '1px solid #fecaca',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Trash2 size={18} color="#ef4444" />
+                      </button>
                     </div>
                   </div>
-
-                  {/* Controls */}
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <button
-                      onClick={() => moveCustomLink(index, 'up')}
-                      disabled={index === 0}
-                      style={{
-                        padding: '6px',
-                        background: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        cursor: index === 0 ? 'not-allowed' : 'pointer',
-                        opacity: index === 0 ? 0.5 : 1
-                      }}
-                    >
-                      <ChevronUp size={18} color="#64748b" />
-                    </button>
-
-                    <button
-                      onClick={() => moveCustomLink(index, 'down')}
-                      disabled={index === customLinks.length - 1}
-                      style={{
-                        padding: '6px',
-                        background: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        cursor: index === customLinks.length - 1 ? 'not-allowed' : 'pointer',
-                        opacity: index === customLinks.length - 1 ? 0.5 : 1
-                      }}
-                    >
-                      <ChevronDown size={18} color="#64748b" />
-                    </button>
-
-                    <button
-                      onClick={() => deleteCustomLink(link.id)}
-                      style={{
-                        padding: '6px',
-                        background: 'white',
-                        border: '1px solid #fecaca',
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <Trash2 size={18} color="#ef4444" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div style={{
               textAlign: 'center',
               padding: '40px 20px',
               color: '#64748b',
-              fontSize: '14px'
+              fontSize: '14px',
+              background: '#f8fafc',
+              borderRadius: '8px'
             }}>
-              No custom links yet. Add your first link above!
+              No links yet. Add social media or custom links above!
             </div>
           )}
         </div>
 
-        {/* Remember to Save Reminder */}
-        <div style={{
-          background: '#fffbeb',
-          border: '1px solid #fde68a',
-          borderRadius: '8px',
-          padding: '16px',
-          fontSize: '14px',
-          color: '#92400e',
-          textAlign: 'center'
-        }}>
-          💡 <strong>Remember:</strong> Click "Save All Changes" at the top to save your profile and links!
-        </div>
+        {/* Bottom Save Button */}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            width: '100%',
+            padding: '14px 24px',
+            background: saving ? '#cbd5e1' : 'linear-gradient(135deg, #0A9D93 0%, #0077B6 100%)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '700',
+            cursor: saving ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {saving ? 'Saving...' : 'Save All Changes'}
+        </button>
       </div>
     </div>
   );
